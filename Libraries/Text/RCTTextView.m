@@ -79,6 +79,7 @@
   BOOL _blockTextShouldChange;
   BOOL _nativeUpdatesInFlight;
   NSInteger _nativeEventCount;
+  NSInteger _selectionLastUpdatedOnEvent;
 
   CGSize _previousContentSize;
   BOOL _viewDidCompleteInitialLayout;
@@ -477,6 +478,7 @@ static NSAttributedString *removeReactTagFromString(NSAttributedString *string)
 
   NSInteger eventLag = _nativeEventCount - _mostRecentEventCount;
   if (eventLag == 0 && ![currentSelection isEqual:selectedTextRange]) {
+    _selectionLastUpdatedOnEvent = _nativeEventCount;
     _previousSelectionRange = selectedTextRange;
     _textView.selectedTextRange = selectedTextRange;
   } else if (eventLag > RCTTextUpdateLagWarningThreshold) {
@@ -494,8 +496,8 @@ static NSAttributedString *removeReactTagFromString(NSAttributedString *string)
     _predictedText = text;
     _textView.text = text;
 
-    if (selection.empty) {
-      // maintain cursor position relative to the end of the old text
+    if (selection.empty && _selectionLastUpdatedOnEvent != _nativeEventCount) {
+      // maintain cursor position relative to the end of the old text if the selection hasn't also been updated
       NSInteger start = [_textView offsetFromPosition:_textView.beginningOfDocument toPosition:selection.start];
       NSInteger offsetFromEnd = oldTextLength - start;
       NSInteger newOffset = text.length - offsetFromEnd;
